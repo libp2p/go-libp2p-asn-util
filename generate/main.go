@@ -19,15 +19,14 @@ const (
 
 func main() {
 	// file with the ASN mappings for IPv6 CIDRs.
-	// See ipv6_asn.csv
-	//ipv6File := os.Getenv("ASN_IPV6_FILE")
-	p := "/Users/aarshshah/go/src/github.com/libp2p/go-libp2p-asn-util/generate/ipv6_asn.tsv"
+	// See ipv6_asn.tsv
+	ipv6File := os.Getenv("ASN_IPV6_FILE")
 
-	/*if len(ipv6File) == 0 {
+	if len(ipv6File) == 0 {
 		panic(errors.New("environment vars must be provided"))
-	}*/
+	}
 
-	ipv6CidrToAsnMap := readMappingFile(p)
+	ipv6CidrToAsnMap := readMappingFile(ipv6File)
 	f, err := os.Create(ipv6OutputFile)
 	if err != nil {
 		panic(err)
