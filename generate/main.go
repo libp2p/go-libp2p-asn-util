@@ -4,11 +4,12 @@ import (
 	"encoding/csv"
 	"errors"
 	"fmt"
-	u "github.com/ipfs/go-ipfs-util"
 	"io"
 	"math/bits"
 	"net"
 	"os"
+
+	u "github.com/ipfs/go-ipfs-util"
 )
 
 const (

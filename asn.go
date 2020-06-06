@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/yl2chen/cidranger"
+	"github.com/libp2p/go-cidranger"
 )
 
 var Store *asnStore
