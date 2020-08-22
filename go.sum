@@ -2,8 +2,8 @@ github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/ipfs/go-ipfs-util v0.0.2 h1:59Sswnk1MFaiq+VcaknX7aYEyGyGDAA73ilhEK2POp8=
 github.com/ipfs/go-ipfs-util v0.0.2/go.mod h1:CbPtkWJzjLdEcezDns2XYaehFVNXG9zrdrtMecczcsQ=
-github.com/libp2p/go-cidranger v1.0.0 h1:EHrUPBAmseAjEKl+aqaonm0u6eZ04+Cvw2UejIhg3lE=
-github.com/libp2p/go-cidranger v1.0.0/go.mod h1:66eNgiCUVEUSDYy3J2db4qc4hA7QyTyTqiF1n3CgSvA=
+github.com/libp2p/go-cidranger v1.0.1-0.20200822014302-3adf42f7f490 h1:uHej7sjp4yKZzMeUyWhBBv/RGZsOiiG6zqTwM3DD/9M=
+github.com/libp2p/go-cidranger v1.0.1-0.20200822014302-3adf42f7f490/go.mod h1:66eNgiCUVEUSDYy3J2db4qc4hA7QyTyTqiF1n3CgSvA=
 github.com/minio/blake2b-simd v0.0.0-20160723061019-3f5f724cb5b1 h1:lYpkrQH5ajf0OXOcUbGjvZxxijuBwbbmlSxLiuofa+g=
 github.com/minio/blake2b-simd v0.0.0-20160723061019-3f5f724cb5b1/go.mod h1:pD8RvIylQ358TN4wwqatJ8rNavkEINozVn9DtGI3dfQ=
 github.com/minio/sha256-simd v0.1.1-0.20190913151208-6de447530771 h1:MHkK1uRtFbVqvAgvWxafZe54+5uBxLluGylDiKgdhwo=
