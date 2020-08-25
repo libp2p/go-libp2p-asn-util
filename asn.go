@@ -8,14 +8,10 @@ import (
 	"github.com/libp2p/go-cidranger"
 )
 
-var Store *asnStore
+var Store *indirectAsnStore
 
 func init() {
-	s, err := NewAsnStore()
-	if err != nil {
-		panic(err)
-	}
-	Store = s
+	Store = newIndirectAsnStore()
 }
 
 type networkWithAsn struct {
@@ -53,9 +49,7 @@ func (a *asnStore) AsnForIPv6(ip net.IP) (string, error) {
 	return n.asn, nil
 }
 
-// NewAsnStore returns a `asnStore` that can be queried for the Autonomous System Numbers
-// for a given IP address or a multiaddress which contains an IP address.
-func NewAsnStore() (*asnStore, error) {
+func newAsnStore() (*asnStore, error) {
 	cr := cidranger.NewPCTrieRanger()
 
 	for k, v := range ipv6CidrToAsnMap {
@@ -70,4 +64,34 @@ func NewAsnStore() (*asnStore, error) {
 	}
 
 	return &asnStore{cr}, nil
+}
+
+type indirectAsnStore struct {
+	store *asnStore
+	doneLoading chan struct{}
+}
+
+// AsnForIPv6 returns the AS number for the given IPv6 address.
+// If no mapping exists for the given IP, this function will
+// return an empty ASN and a nil error.
+func (a *indirectAsnStore) AsnForIPv6(ip net.IP) (string, error) {
+	<-a.doneLoading
+	return a.store.AsnForIPv6(ip)
+}
+
+func newIndirectAsnStore() *indirectAsnStore {
+	a := &indirectAsnStore{
+		doneLoading: make(chan struct{}),
+	}
+
+	go func() {
+		defer close(a.doneLoading)
+		store, err := newAsnStore()
+		if err != nil {
+			panic(err)
+		}
+		a.store = store
+	}()
+
+	return a
 }
