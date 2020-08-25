@@ -1,6 +1,8 @@
 package cidrasn
 
 import (
+	"bytes"
+	"encoding/gob"
 	"fmt"
 	"net"
 
@@ -15,6 +17,14 @@ func NewCIDRASN() *CIDRASN {
 	return &CIDRASN{
 		ipv6: &trie.Trie{},
 	}
+}
+
+func (m *CIDRASN) Marshal() ([]byte, error) {
+	var w bytes.Buffer
+	if err := gob.NewEncoder(&w).Encode(m); err != nil {
+		return nil, err
+	}
+	return w.Bytes(), nil
 }
 
 func (m *CIDRASN) Add(ipNet net.IPNet, asn string) {
