@@ -1,34 +1,34 @@
 package cidrasn
 
 import (
-	"bytes"
-	"encoding/gob"
 	"fmt"
 	"net"
 
 	"github.com/libp2p/go-libp2p-asn-util/trie"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 type CIDRASN struct {
-	ipv6 *trie.Trie
+	IPv6 *trie.Trie
 }
 
 func NewCIDRASN() *CIDRASN {
 	return &CIDRASN{
-		ipv6: &trie.Trie{},
+		IPv6: &trie.Trie{},
 	}
 }
 
 func (m *CIDRASN) Marshal() ([]byte, error) {
-	var w bytes.Buffer
-	if err := gob.NewEncoder(&w).Encode(m); err != nil {
-		return nil, err
-	}
-	return w.Bytes(), nil
+	return bson.Marshal(m)
+	// var w bytes.Buffer
+	// if err := gob.NewEncoder(&w).Encode(m); err != nil {
+	// 	return nil, err
+	// }
+	// return w.Bytes(), nil
 }
 
 func (m *CIDRASN) Add(ipNet net.IPNet, asn string) {
-	m.ipv6.Add(cidrToKey(ipNet, asn))
+	m.IPv6.Add(cidrToKey(ipNet, asn))
 }
 
 func (m *CIDRASN) AsnForIPv6(ip net.IP) (string, error) {
@@ -40,7 +40,7 @@ func (m *CIDRASN) AsnForIPv6(ip net.IP) (string, error) {
 }
 
 func (m *CIDRASN) containingNetworksIPv6(ip net.IP) []cidrKey {
-	_, found := m.ipv6.FindSubKeys(ipToKey(ip))
+	_, found := m.IPv6.FindSubKeys(ipToKey(ip))
 	q := []cidrKey{}
 	for _, f := range found {
 		k := f.(cidrKey)
