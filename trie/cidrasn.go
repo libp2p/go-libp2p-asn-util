@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"net"
 
-	"go.mongodb.org/mongo-driver/bson"
+	// "go.mongodb.org/mongo-driver/bson"
+	bson "github.com/vmihailenco/msgpack"
 )
 
 type CIDRASN struct {

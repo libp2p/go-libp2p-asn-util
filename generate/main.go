@@ -44,6 +44,7 @@ func main() {
 	}
 	defer f.Close()
 	data, err := s.Marshal()
+	fmt.Printf("data size %d\n", len(data))
 	if err != nil {
 		panic(err)
 	}

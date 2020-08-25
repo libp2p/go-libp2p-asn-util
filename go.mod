@@ -6,4 +6,5 @@ require (
 	github.com/ipfs/go-ipfs-util v0.0.2
 	github.com/stretchr/testify v1.4.0
 	go.mongodb.org/mongo-driver v1.4.0
+	github.com/vmihailenco/msgpack v4.0.4+incompatible
 )
