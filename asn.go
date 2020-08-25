@@ -3,13 +3,13 @@ package asnutil
 import (
 	"net"
 
-	"github.com/libp2p/go-libp2p-asn-util/cidrasn"
+	"github.com/libp2p/go-libp2p-asn-util/trie"
 )
 
 var Store *store
 
 func init() {
-	m, err := cidrasn.Unmarshal([]byte(cidrASNRaw))
+	m, err := trie.Unmarshal([]byte(cidrASNRaw))
 	if err != nil {
 		panic(err)
 	}
@@ -17,7 +17,7 @@ func init() {
 }
 
 type store struct {
-	m *cidrasn.CIDRASN
+	m *trie.CIDRASN
 }
 
 func (s *store) AsnForIPv6(ip net.IP) (string, error) {

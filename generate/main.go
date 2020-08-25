@@ -11,7 +11,7 @@ import (
 	"strconv"
 
 	u "github.com/ipfs/go-ipfs-util"
-	"github.com/libp2p/go-libp2p-asn-util/cidrasn"
+	"github.com/libp2p/go-libp2p-asn-util/trie"
 )
 
 const (
@@ -29,7 +29,7 @@ func main() {
 		panic(errors.New("environment vars must be provided"))
 	}
 
-	s := cidrasn.NewCIDRASN()
+	s := trie.NewCIDRASN()
 	for cidr, asn := range readMappingFile(ipv6File) {
 		_, ipNet, err := net.ParseCIDR(cidr)
 		if err != nil {

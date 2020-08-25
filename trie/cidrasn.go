@@ -1,20 +1,19 @@
-package cidrasn
+package trie
 
 import (
 	"fmt"
 	"net"
 
-	"github.com/libp2p/go-libp2p-asn-util/trie"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
 type CIDRASN struct {
-	IPv6 *trie.Trie
+	IPv6 *Trie
 }
 
 func NewCIDRASN() *CIDRASN {
 	return &CIDRASN{
-		IPv6: &trie.Trie{},
+		IPv6: &Trie{},
 	}
 }
 
@@ -42,11 +41,10 @@ func (m *CIDRASN) AsnForIPv6(ip net.IP) (string, error) {
 	return netKeys[0].ASN, nil
 }
 
-func (m *CIDRASN) containingNetworksIPv6(ip net.IP) []cidrKey {
+func (m *CIDRASN) containingNetworksIPv6(ip net.IP) []*Key {
 	_, found := m.IPv6.FindSubKeys(ipToKey(ip))
-	q := []cidrKey{}
-	for _, f := range found {
-		k := f.(cidrKey)
+	q := []*Key{}
+	for _, k := range found {
 		if k.Net.Contains(ip) {
 			q = append(q, k)
 		}

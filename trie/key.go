@@ -1,27 +1,25 @@
-package cidrasn
+package trie
 
 import (
 	"fmt"
 	"net"
-
-	"github.com/libp2p/go-libp2p-asn-util/trie"
 )
 
-type cidrKey struct {
+type Key struct {
 	IP  net.IP
 	Net net.IPNet
 	ASN string
 }
 
-func cidrToKey(ipNet net.IPNet, asn string) cidrKey {
-	return cidrKey{Net: ipNet, ASN: asn}
+func cidrToKey(ipNet net.IPNet, asn string) *Key {
+	return &Key{Net: ipNet, ASN: asn}
 }
 
-func ipToKey(ip net.IP) cidrKey {
-	return cidrKey{IP: ip}
+func ipToKey(ip net.IP) *Key {
+	return &Key{IP: ip}
 }
 
-func (k cidrKey) Len() int {
+func (k *Key) Len() int {
 	if len(k.IP) > 0 {
 		return len(k.IP) * 8
 	} else {
@@ -30,7 +28,7 @@ func (k cidrKey) Len() int {
 	}
 }
 
-func (k cidrKey) String() string {
+func (k *Key) String() string {
 	if len(k.IP) == 0 {
 		return fmt.Sprintf("%v/%v-->%s", k.Net.IP, k.Len(), k.ASN)
 	} else {
@@ -38,7 +36,7 @@ func (k cidrKey) String() string {
 	}
 }
 
-func (k cidrKey) asIP() net.IP {
+func (k *Key) asIP() net.IP {
 	if len(k.IP) > 0 {
 		return k.IP
 	} else {
@@ -46,19 +44,15 @@ func (k cidrKey) asIP() net.IP {
 	}
 }
 
-func (k cidrKey) Equal(r trie.Key) bool {
-	if k2, ok := r.(cidrKey); ok {
-		if k.Len() != k2.Len() {
-			return false
-		} else {
-			return commonPrefixLen(k.asIP(), k2.asIP()) >= k.Len()
-		}
-	} else {
+func (k *Key) Equal(r *Key) bool {
+	if k.Len() != r.Len() {
 		return false
+	} else {
+		return commonPrefixLen(k.asIP(), r.asIP()) >= k.Len()
 	}
 }
 
-func (k cidrKey) BitAt(i int) byte {
+func (k *Key) BitAt(i int) byte {
 	b := []byte(k.asIP())
 	// the most significant byte in an IP address is the first one
 	d := b[i/8] & (byte(1) << (7 - (i % 8)))

@@ -1,14 +1,14 @@
 package trie
 
-type Key interface {
-	Equal(Key) bool
-	BitAt(int) byte
-	Len() int
-}
+// type Key interface {
+// 	Equal(Key) bool
+// 	BitAt(int) byte
+// 	Len() int
+// }
 
 type Trie struct {
 	Branch [2]*Trie
-	Key    Key
+	Key    *Key
 }
 
 func (trie *Trie) IsEmpty() bool {

@@ -1,10 +1,10 @@
 package trie
 
-func (trie *Trie) Add(q Key) (insertedDepth int, insertedOK bool) {
+func (trie *Trie) Add(q *Key) (insertedDepth int, insertedOK bool) {
 	return trie.AddAtDepth(0, q)
 }
 
-func (trie *Trie) AddAtDepth(depth int, q Key) (insertedDepth int, insertedOK bool) {
+func (trie *Trie) AddAtDepth(depth int, q *Key) (insertedDepth int, insertedOK bool) {
 	if q.Len() == depth {
 		if trie.Key == nil {
 			trie.Key = q
