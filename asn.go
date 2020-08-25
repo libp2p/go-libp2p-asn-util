@@ -1,73 +1,48 @@
 package asnutil
 
 import (
+	"encoding/binary"
 	"errors"
-	"fmt"
+	"math"
 	"net"
-
-	"github.com/libp2p/go-cidranger"
+	"sort"
 )
 
-var Store *asnStore
-
-func init() {
-	s, err := NewAsnStore()
-	if err != nil {
-		panic(err)
-	}
-	Store = s
-}
-
-type networkWithAsn struct {
-	nn  net.IPNet
-	asn string
-}
-
-func (e *networkWithAsn) Network() net.IPNet {
-	return e.nn
-}
-
-type asnStore struct {
-	cr cidranger.Ranger
+type asn struct {
+	prefix uint64
+	asn    string
 }
 
 // AsnForIPv6 returns the AS number for the given IPv6 address.
 // If no mapping exists for the given IP, this function will
-// return an empty ASN and a nil error.
-func (a *asnStore) AsnForIPv6(ip net.IP) (string, error) {
-	if ip.To16() == nil {
+// return "" and a nil error.
+func AsnForIPv6(ip net.IP) (string, error) {
+	ip = ip.To16()
+	if ip == nil {
 		return "", errors.New("ONLY IPv6 addresses supported for now")
 	}
 
-	ns, err := a.cr.ContainingNetworks(ip)
-	if err != nil {
-		return "", fmt.Errorf("failed to find matching networks for the given ip: %w", err)
-	}
+	targetPrefix := binary.BigEndian.Uint64(ip)
 
-	if len(ns) == 0 {
+	idx := sort.Search(len(ipv6CidrToAsnMap), func(i int) bool {
+		return ipv6CidrToAsnMap[i].prefix&^uint64(0xFF) > targetPrefix
+	})
+	if idx == 0 {
 		return "", nil
 	}
-
-	// longest prefix match
-	n := ns[len(ns)-1].(*networkWithAsn)
-	return n.asn, nil
-}
-
-// NewAsnStore returns a `asnStore` that can be queried for the Autonomous System Numbers
-// for a given IP address or a multiaddress which contains an IP address.
-func NewAsnStore() (*asnStore, error) {
-	cr := cidranger.NewPCTrieRanger()
-
-	for k, v := range ipv6CidrToAsnMap {
-		_, nn, err := net.ParseCIDR(k)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse CIDR %s: %w", k, err)
-		}
-
-		if err := cr.Insert(&networkWithAsn{*nn, v}); err != nil {
-			return nil, fmt.Errorf("failed to insert CIDR %s in Trie store: %w", k, err)
-		}
+	a := ipv6CidrToAsnMap[idx-1]
+	prefixLen := a.prefix & 0xFF
+	prefix := a.prefix & ^uint64(0xFF)
+	if prefix == targetPrefix&(math.MaxUint64<<(64-prefixLen)) {
+		return a.asn, nil
 	}
-
-	return &asnStore{cr}, nil
+	return "", nil
 }
+
+type asnStore struct{}
+
+func (a asnStore) AsnForIPv6(ip net.IP) (string, error) {
+	return AsnForIPv6(ip)
+}
+
+var Store = asnStore{}

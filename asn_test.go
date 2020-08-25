@@ -32,7 +32,7 @@ func TestAsnIpv6(t *testing.T) {
 
 	for name, tc := range tcs {
 		require.NotEmpty(t, tc.ip, name)
-		n, err := Store.AsnForIPv6(tc.ip)
+		n, err := AsnForIPv6(tc.ip)
 		require.NoError(t, err)
 		require.Equal(t, tc.expectedASN, n, name)
 	}
