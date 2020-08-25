@@ -67,7 +67,7 @@ func newAsnStore() (*asnStore, error) {
 }
 
 type indirectAsnStore struct {
-	store *asnStore
+	store       *asnStore
 	doneLoading chan struct{}
 }
 
