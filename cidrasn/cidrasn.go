@@ -18,13 +18,16 @@ func NewCIDRASN() *CIDRASN {
 	}
 }
 
+func Unmarshal(raw []byte) (*CIDRASN, error) {
+	m := &CIDRASN{}
+	if err := bson.Unmarshal(raw, m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 func (m *CIDRASN) Marshal() ([]byte, error) {
 	return bson.Marshal(m)
-	// var w bytes.Buffer
-	// if err := gob.NewEncoder(&w).Encode(m); err != nil {
-	// 	return nil, err
-	// }
-	// return w.Bytes(), nil
 }
 
 func (m *CIDRASN) Add(ipNet net.IPNet, asn string) {
