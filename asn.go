@@ -11,7 +11,7 @@ import (
 var Store *indirectAsnStore
 
 func init() {
-	Store = &indirectAsnStore{}
+	Store = newIndirectAsnStore()
 }
 
 type networkWithAsn struct {
@@ -49,19 +49,6 @@ func (a *asnStore) AsnForIPv6(ip net.IP) (string, error) {
 	return n.asn, nil
 }
 
-// NewAsnStore returns a `asnStore` that can be queried for the Autonomous System Numbers
-// for a given IP address or a multiaddress which contains an IP address.
-func NewAsnStore() (*asnStore, error) {
-	if Store.store == nil {
-		store, err := newAsnStore()
-		if err != nil {
-			return nil, err
-		}
-		Store.store = store
-	}
-	return Store.store, nil
-}
-
 func newAsnStore() (*asnStore, error) {
 	cr := cidranger.NewPCTrieRanger()
 
@@ -81,19 +68,30 @@ func newAsnStore() (*asnStore, error) {
 
 type indirectAsnStore struct {
 	store *asnStore
+	doneLoading chan struct{}
 }
 
 // AsnForIPv6 returns the AS number for the given IPv6 address.
 // If no mapping exists for the given IP, this function will
 // return an empty ASN and a nil error.
 func (a *indirectAsnStore) AsnForIPv6(ip net.IP) (string, error) {
-	if a.store == nil {
+	<-a.doneLoading
+	return a.store.AsnForIPv6(ip)
+}
+
+func newIndirectAsnStore() *indirectAsnStore {
+	a := &indirectAsnStore{
+		doneLoading: make(chan struct{}),
+	}
+
+	go func() {
+		defer close(a.doneLoading)
 		store, err := newAsnStore()
 		if err != nil {
 			panic(err)
 		}
 		a.store = store
-	}
+	}()
 
-	return a.store.AsnForIPv6(ip)
+	return a
 }
