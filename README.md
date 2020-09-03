@@ -9,11 +9,12 @@ Supports ONLY IPv6 addresses for now.
 
 ## Table of Contents
 
-- [Install](#install)
-- [Usage](#usage)
-- [Documentation](#documentation)
-- [Contribute](#contribute)
-- [License](#license)
+- [# go-libp2p-asn-util](#h1-idgo-libp2p-asn-util-7go-libp2p-asn-utilh1)
+  - [Table of Contents](#table-of-contents)
+  - [Install](#install)
+  - [Usage](#usage)
+  - [Contribute](#contribute)
+  - [License](#license)
 
 ## Install
 
@@ -29,9 +30,7 @@ import (
 )
 
 func main() {
-   store, err := asn.NewAsnStore()
-   
-   asNumber,err := store.AsnForIP(net.ParseIP("2a03:2880:f003:c07:face:b00c::2"))
+   asNumber,err := asn.Store.AsnForIP(net.ParseIP("2a03:2880:f003:c07:face:b00c::2"))
  }
 ```
 

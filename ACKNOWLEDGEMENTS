@@ -1,0 +1,2 @@
+Some of the tests in this repository borrow code and testdata from github.com/libp2p/go-cidranger,
+which itself is a fork of github.com/yl2chen/cidranger.
