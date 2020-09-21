@@ -14,7 +14,7 @@ import (
 
 const (
 	pkgName        = "asnutil"
-	ipv6OutputFile = "ipv6_asn_map.go"
+	ipv6OutputFile = "ipv6_asn_map.gen.go"
 	ipv6MapName    = "ipv6CidrToAsnMap"
 )
 
