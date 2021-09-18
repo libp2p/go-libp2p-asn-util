@@ -2,3 +2,4 @@
 package asnutil
 
 //go:generate go run ./generate/
+//go:generate go fmt ./...
