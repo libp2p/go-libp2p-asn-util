@@ -1,13 +1,16 @@
 package main
 
 import (
+	"compress/gzip"
 	"encoding/csv"
 	"errors"
 	"fmt"
 	"io"
 	"math/bits"
 	"net"
+	"net/http"
 	"os"
+	"strings"
 
 	u "github.com/ipfs/go-ipfs-util"
 )
@@ -18,13 +21,22 @@ const (
 	ipv6MapName    = "ipv6CidrToAsnMap"
 )
 
+const defaultFile = "https://iptoasn.com/data/ip2asn-v6.tsv.gz"
+
 func main() {
 	// file with the ASN mappings for IPv6 CIDRs.
 	// See ipv6_asn.tsv
 	ipv6File := os.Getenv("ASN_IPV6_FILE")
 
 	if len(ipv6File) == 0 {
-		panic(errors.New("environment vars must be provided"))
+		ipv6File = defaultFile
+	}
+	if strings.Contains(ipv6File, "://") {
+		local, err := getMappingFile(ipv6File)
+		if err != nil {
+			panic(err)
+		}
+		ipv6File = local
 	}
 
 	ipv6CidrToAsnMap := readMappingFile(ipv6File)
@@ -85,7 +97,55 @@ func readMappingFile(path string) map[string]string {
 		cn := fmt.Sprintf("%s/%d", startIP, prefixLen)
 		m[cn] = asn
 	}
+}
 
+// Get a url, return file it's downloaded to. optionally gzip decode.
+func getMappingFile(url string) (path string, err error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return
+	}
+	baseFile, err := os.CreateTemp("", "ip-map-download-*")
+	if err != nil {
+		return
+	}
+	defer baseFile.Close()
+	_, err = io.Copy(baseFile, resp.Body)
+	if err != nil {
+		return
+	}
+	initBuf := make([]byte, 512)
+	_, err = baseFile.ReadAt(initBuf, 0)
+	if err != nil {
+		return
+	}
+	if strings.Contains(http.DetectContentType(initBuf), "application/x-gzip") {
+		// gunzip it.
+		_, err = baseFile.Seek(0, io.SeekStart)
+		if err != nil {
+			return
+		}
+		var gzr *gzip.Reader
+		gzr, err = gzip.NewReader(baseFile)
+		if err != nil {
+			return
+		}
+		var rawFile *os.File
+		rawFile, err = os.CreateTemp("", "ip-map-download-*")
+		if err != nil {
+			return
+		}
+		defer os.Remove(baseFile.Name())
+		defer rawFile.Close()
+		_, err = io.Copy(rawFile, gzr)
+		if err != nil {
+			return
+		}
+		path = rawFile.Name()
+		return
+	}
+	path = baseFile.Name()
+	return
 }
 
 func zeroPrefixLen(id []byte) int {
