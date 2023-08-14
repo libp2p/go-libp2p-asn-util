@@ -1,6 +1,6 @@
 module github.com/libp2p/go-libp2p-asn-util
 
-go 1.19
+go 1.20
 
 require (
 	github.com/ipfs/go-ipfs-util v0.0.2
