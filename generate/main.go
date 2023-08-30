@@ -22,7 +22,7 @@ const (
 	ipv6listName   = "ipv6CidrToAsnPairList"
 )
 
-const defaultFile = "https://iptoasn.com/data/ip2asn-v6.tsv.gz"
+const defaultFile = "https://github.com/pl-strflt/iptoasn/raw/2dea129cd0007acc6319911d2813249d52a0f533/data/ip2asn-v6.tsv.gz"
 
 func main() {
 	// file with the ASN mappings for IPv6 CIDRs.
