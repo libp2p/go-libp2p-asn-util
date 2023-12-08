@@ -2,18 +2,15 @@ package main
 
 import (
 	"compress/gzip"
-	"encoding/csv"
-	"errors"
 	"fmt"
 	"io"
 	"math/bits"
-	"net"
 	"net/http"
 	"os"
 	"sort"
 	"strings"
 
-	u "github.com/ipfs/go-ipfs-util"
+	"github.com/libp2p/go-libp2p-asn-util/internal"
 )
 
 const (
@@ -40,13 +37,21 @@ func main() {
 		ipv6File = local
 	}
 
-	ipv6CidrToAsnMap := readMappingFile(ipv6File)
-	f, err := os.Create(ipv6OutputFile)
+	f, err := os.Open(ipv6File)
 	if err != nil {
 		panic(err)
 	}
 	defer f.Close()
-	writeMappingToFile(f, ipv6CidrToAsnMap, ipv6listName)
+	ipv6CidrToAsnMap, err := internal.ReadMappingFile(f)
+	if err != nil {
+		panic(err)
+	}
+	out, err := os.Create(ipv6OutputFile)
+	if err != nil {
+		panic(err)
+	}
+	defer out.Close()
+	writeMappingToFile(out, ipv6CidrToAsnMap, ipv6listName)
 }
 
 type listEntry struct {
@@ -74,41 +79,6 @@ func writeMappingToFile(f *os.File, m map[string]string, listName string) {
 		printf("\n\t{\"%s\", \"%s\"},", e.cidr, e.asn)
 	}
 	printf("\n}\n")
-}
-
-func readMappingFile(path string) map[string]string {
-	m := make(map[string]string)
-	f, err := os.Open(path)
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
-	r := csv.NewReader(f)
-	r.Comma = '\t'
-	for {
-		record, err := r.Read()
-		// Stop at EOF.
-		if err == io.EOF {
-			return m
-		}
-
-		startIP := record[0]
-		endIP := record[1]
-		asn := record[2]
-		if asn == "0" {
-			continue
-		}
-
-		s := net.ParseIP(startIP)
-		e := net.ParseIP(endIP)
-		if s.To16() == nil || e.To16() == nil {
-			panic(errors.New("IP should be v6"))
-		}
-
-		prefixLen := zeroPrefixLen(u.XOR(s.To16(), e.To16()))
-		cn := fmt.Sprintf("%s/%d", startIP, prefixLen)
-		m[cn] = asn
-	}
 }
 
 // Get a url, return file it's downloaded to. optionally gzip decode.

@@ -53,6 +53,10 @@ func (a *asnStore) AsnForIPv6(ip net.IP) (string, error) {
 func newAsnStore() (*asnStore, error) {
 	cr := cidranger.NewPCTrieRanger()
 
+	ipv6CidrToAsnPairList, err := loadIPv6ASNMappings()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load ipv6 ASN mappings: %w", err)
+	}
 	for _, v := range ipv6CidrToAsnPairList {
 		_, nn, err := net.ParseCIDR(v.cidr)
 		if err != nil {
