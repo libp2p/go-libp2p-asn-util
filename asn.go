@@ -89,3 +89,5 @@ func (backwardCompat) AsnForIPv6(ip net.IP) (string, error) {
 	}
 	return strconv.FormatUint(uint64(asn), 10), nil
 }
+
+func (backwardCompat) Init() {}
