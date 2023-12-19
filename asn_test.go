@@ -1,6 +1,7 @@
 package asnutil
 
 import (
+	"math/rand"
 	"net"
 	"testing"
 
@@ -32,8 +33,21 @@ func TestAsnIpv6(t *testing.T) {
 
 	for name, tc := range tcs {
 		require.NotEmpty(t, tc.ip, name)
-		n, err := Store.AsnForIPv6(tc.ip)
-		require.NoError(t, err)
-		require.Equal(t, tc.expectedASN, n, name)
+		t.Run(name, func(t *testing.T) {
+			n, err := Store.AsnForIPv6(tc.ip)
+			require.NoError(t, err)
+			require.Equal(t, tc.expectedASN, n, name)
+		})
 	}
+}
+
+var leak uint32
+
+func BenchmarkAsnForIPv6(b *testing.B) {
+	r := rand.New(rand.NewSource(0))
+	var doNotOptimize uint32
+	for i := b.N; i != 0; i-- {
+		doNotOptimize = AsnForIPv6Network(r.Uint64())
+	}
+	leak = doNotOptimize
 }
