@@ -1,26 +1,23 @@
 package main
 
 import (
+	"bufio"
 	"compress/gzip"
+	"encoding/binary"
 	"encoding/csv"
 	"errors"
 	"fmt"
 	"io"
-	"math/bits"
 	"net"
 	"net/http"
 	"os"
-	"sort"
+	"strconv"
 	"strings"
 
-	u "github.com/ipfs/go-ipfs-util"
+	"golang.org/x/exp/slices"
 )
 
-const (
-	pkgName        = "asnutil"
-	ipv6OutputFile = "ipv6_asn_map.gen.go"
-	ipv6listName   = "ipv6CidrToAsnPairList"
-)
+const outputFile = "sorted-network-list.bin"
 
 const defaultFile = "https://iptoasn.com/data/ip2asn-v6.tsv.gz"
 
@@ -40,44 +37,157 @@ func main() {
 		ipv6File = local
 	}
 
-	ipv6CidrToAsnMap := readMappingFile(ipv6File)
-	f, err := os.Create(ipv6OutputFile)
+	networks := readMappingFile(ipv6File)
+
+	// Keep fixing and optimizing until we get a stable configuration.
+	for {
+		before := slices.Clone(networks)
+		// Ensure the networks are sorted, first smallest start then biggest end.
+		slices.SortStableFunc(networks, func(a, b entry) int {
+			switch {
+			case a.start < b.start:
+				return -1
+			case a.start == b.start:
+				switch {
+				case a.end < b.end:
+					return 1
+				case a.end == b.end:
+					return 0
+				default:
+					return -1
+				}
+			default:
+				return 1
+			}
+		})
+
+		// Merge adjacent ranges
+		{
+			var new []entry
+			var old entry
+			for _, n := range networks {
+				if n.start <= old.end || n.start <= old.end+1 {
+					// mergeable
+					if n.asn == old.asn {
+						// merge
+						if n.end > old.end {
+							old.end = n.end
+						}
+						continue
+					}
+					// We have an overlap of different networks :'(
+					// Real example:
+					//	2403:8080::	2403:8080:ffff:ffff:ffff:ffff:ffff:ffff	17964	CN	DXTNET Beijing Dian-Xin-Tong Network Technologies Co., Ltd.
+					//	2403:8080:101::	2403:8080:101:ffff:ffff:ffff:ffff:ffff	4847	CN	CNIX-AP China Networks Inter-Exchange
+					// Split the networks.
+					if n.start < old.start {
+						n, old = old, n
+					}
+					switch {
+					case n.start > old.start && n.end < old.end:
+						// |   old   |
+						//   | new |
+						new = append(new, entry{old.start, n.start - 1, old.asn}, n)
+						old.start = n.end + 1
+					case n.start > old.start && n.end == old.end:
+						// |   old   |
+						//     | new |
+						fallthrough
+					case n.start > old.start && n.end > old.end:
+						// |   old   |
+						//       | new |
+						new = append(new, entry{old.start, n.start - 1, old.asn})
+						old = n
+					case n.start == old.start && n.end > old.end:
+						// |   old   |
+						// |    new    |
+						n, old = old, n
+						fallthrough
+					case n.start == old.start && n.end < old.end:
+						// |   old   |
+						// | new |
+						new = append(new, n)
+						old.start = n.end + 1
+					case n.start == old.start && n.end == old.end:
+						// |   old   |
+						// |   new   |
+						// ¯\_(ツ)_/¯ here we are kinda fucked
+						// in theory we could try merging boths with the next elements and keep the smallest one
+						// but that is tricky since the next elements could also need the same treatment.
+						// Instead drop old, it most likely is a bigger range which was truncated down, and then we should most often prioritize the smallest one.
+						old = n
+					default:
+						panic(fmt.Sprintf("unreachabe: old: %v, new: %v", old, n))
+					}
+					continue
+				}
+
+				// save
+				if old.asn != 0 {
+					new = append(new, old)
+				}
+				old = n
+			}
+			if old.asn != 0 {
+				// trailing save
+				new = append(new, old)
+			}
+			networks = new
+		}
+
+		if slices.Equal(before, networks) {
+			// stabilized
+			break
+		}
+	}
+
+	// Sanity check, we should have increasing networks without overlap
+	var old uint64
+	for i, n := range networks {
+		if n.start > n.end {
+			panic(fmt.Sprintf("at %d; %d has backward range %v %v", i, n.asn, networkToIp(n.start), networkToIp(n.end)))
+		}
+		if n.start <= old {
+			panic(fmt.Sprintf("at %d; %d isn't correctly ordered %v vs %v", i, n.asn, networkToIp(n.start), networkToIp(old)))
+		}
+		old = n.end
+	}
+
+	f, err := os.Create(outputFile)
 	if err != nil {
 		panic(err)
 	}
 	defer f.Close()
-	writeMappingToFile(f, ipv6CidrToAsnMap, ipv6listName)
-}
-
-type listEntry struct {
-	cidr, asn string
-}
-
-func writeMappingToFile(f *os.File, m map[string]string, listName string) {
-	printf := func(s string, args ...interface{}) {
-		_, err := fmt.Fprintf(f, s, args...)
+	w := bufio.NewWriter(f)
+	defer func() {
+		if err := w.Flush(); err != nil {
+			panic(err)
+		}
+	}()
+	var b [8]byte
+	for _, n := range networks {
+		// Write ips "backward" as little endian since all archs we care about natively use little endian.
+		// We could in theory produce an le and be version of the file and use build tags but I don't care enough.
+		// It will still work, but might add a nano second or two to flip the endianness at runtime on be arches.
+		binary.LittleEndian.PutUint64(b[:], n.start)
+		_, err := w.Write(b[:])
+		if err != nil {
+			panic(err)
+		}
+		binary.LittleEndian.PutUint64(b[:], n.end)
+		_, err = w.Write(b[:])
+		if err != nil {
+			panic(err)
+		}
+		binary.LittleEndian.PutUint32(b[:], n.asn)
+		_, err = w.Write(b[:4])
 		if err != nil {
 			panic(err)
 		}
 	}
-	printf("package %s\n\n", pkgName)
-	printf("// Code generated by generate/main.go DO NOT EDIT\n")
-	printf("var %s = [...]struct{ cidr, asn string }{", listName)
-	l := make([]listEntry, 0, len(m))
-	for k, v := range m {
-		l = append(l, listEntry{cidr: k, asn: v})
-	}
-	sort.Slice(l, func(i, j int) bool {
-		return l[i].cidr < l[j].cidr
-	})
-	for _, e := range l {
-		printf("\n\t{\"%s\", \"%s\"},", e.cidr, e.asn)
-	}
-	printf("\n}\n")
 }
 
-func readMappingFile(path string) map[string]string {
-	m := make(map[string]string)
+func readMappingFile(path string) (l []entry) {
 	f, err := os.Open(path)
 	if err != nil {
 		panic(err)
@@ -89,7 +199,7 @@ func readMappingFile(path string) map[string]string {
 		record, err := r.Read()
 		// Stop at EOF.
 		if err == io.EOF {
-			return m
+			return
 		}
 
 		startIP := record[0]
@@ -105,9 +215,16 @@ func readMappingFile(path string) map[string]string {
 			panic(errors.New("IP should be v6"))
 		}
 
-		prefixLen := zeroPrefixLen(u.XOR(s.To16(), e.To16()))
-		cn := fmt.Sprintf("%s/%d", startIP, prefixLen)
-		m[cn] = asn
+		as, err := strconv.ParseUint(asn, 10, 32)
+		if err != nil {
+			panic(err)
+		}
+
+		l = append(l, entry{
+			start: binary.BigEndian.Uint64(s),
+			end:   binary.BigEndian.Uint64(e),
+			asn:   uint32(as),
+		})
 	}
 }
 
@@ -160,11 +277,19 @@ func getMappingFile(url string) (path string, err error) {
 	return
 }
 
-func zeroPrefixLen(id []byte) int {
-	for i, b := range id {
-		if b != 0 {
-			return i*8 + bits.LeadingZeros8(uint8(b))
-		}
-	}
-	return len(id) * 8
+type entry struct {
+	// networks
+	start, end uint64
+
+	asn uint32
+}
+
+func (e entry) String() string {
+	return fmt.Sprintf("{%v, %v, %d}", networkToIp(e.start), networkToIp(e.end), e.asn)
+}
+
+func networkToIp(net uint64) net.IP {
+	var ip [16]byte
+	binary.BigEndian.PutUint64(ip[:], net)
+	return ip[:]
 }
