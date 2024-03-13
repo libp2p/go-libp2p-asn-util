@@ -1,6 +1,7 @@
 module github.com/libp2p/go-libp2p-asn-util
 
-go 1.19
+go 1.21
+
 
 require (
 	github.com/stretchr/testify v1.4.0
