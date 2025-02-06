@@ -169,13 +169,15 @@ func main() {
 		// Write ips "backward" as little endian since all archs we care about natively use little endian.
 		// We could in theory produce an le and be version of the file and use build tags but I don't care enough.
 		// It will still work, but might add a nano second or two to flip the endianness at runtime on be arches.
+
+		// Only store 48 most significant bits since on public BGP networks smaller than 48 bits are not allowed.
 		binary.LittleEndian.PutUint64(b[:], n.start)
-		_, err := w.Write(b[:])
+		_, err := w.Write(b[2:])
 		if err != nil {
 			panic(err)
 		}
 		binary.LittleEndian.PutUint64(b[:], n.end)
-		_, err = w.Write(b[:])
+		_, err = w.Write(b[2:])
 		if err != nil {
 			panic(err)
 		}
