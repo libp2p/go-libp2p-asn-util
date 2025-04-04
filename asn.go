@@ -12,15 +12,28 @@ import (
 //go:embed sorted-network-list.bin
 var dataset string
 
-const entrySize = 8*2 + 4 // start, end 8 bytes; asn 4 bytes
+const entrySize = 6*2 + 4 // start, end 6 bytes; asn 4 bytes
 
 func readEntry(index uint) (start, end uint64, asn uint32) {
 	base := entrySize * index
 	b := dataset[base : base+entrySize]
-	start = uint64(b[0]) | uint64(b[1])<<8 | uint64(b[2])<<16 | uint64(b[3])<<24 | uint64(b[4])<<32 | uint64(b[5])<<40 | uint64(b[6])<<48 | uint64(b[7])<<56
-	b = b[8:]
-	end = uint64(b[0]) | uint64(b[1])<<8 | uint64(b[2])<<16 | uint64(b[3])<<24 | uint64(b[4])<<32 | uint64(b[5])<<40 | uint64(b[6])<<48 | uint64(b[7])<<56
-	b = b[8:]
+	// dataset stores the 6 MSBs of the network address for start and end
+	// the 2 LSBs are 0000 and ffff respectively because the BGP IPv6 quantum is 48 bits
+	start = uint64(b[0])<<16 |
+		uint64(b[1])<<24 |
+		uint64(b[2])<<32 |
+		uint64(b[3])<<40 |
+		uint64(b[4])<<48 |
+		uint64(b[5])<<56
+	b = b[6:]
+	end = 0xffff |
+		uint64(b[0])<<16 |
+		uint64(b[1])<<24 |
+		uint64(b[2])<<32 |
+		uint64(b[3])<<40 |
+		uint64(b[4])<<48 |
+		uint64(b[5])<<56
+	b = b[6:]
 	asn = uint32(b[0]) | uint32(b[1])<<8 | uint32(b[2])<<16 | uint32(b[3])<<24
 	return
 }
